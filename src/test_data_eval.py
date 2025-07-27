@@ -7,30 +7,39 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification
 import src.settings as settings
 from .dataloader import reddit_impacts_dataset
 from .evaluation import calculate_f1_per_entity_covering_all
-from .utils import get_parser
+from .utils import get_parser, setup_device
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"  # Use GPU 0
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if device.type == "cuda":
-    print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+# os.environ["CUDA_VISIBLE_DEVICES"] = "7"  # Use GPU 0
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# if device.type == "cuda":
+#     print(f"Using GPU: {torch.cuda.get_device_name(0)}")
 
-path = "/labs/sarkerlab/sdey26/Reddit_Impacts_NER/models_and_checkpoints/"
+path = "/labs/sarkerlab/sdey26/Reddit_Impacts_NER/"
+
 # Parse arguments
 parser = get_parser()
 args = parser.parse_args()
 logger = logging.getLogger(__name__)
+print(args)
 
-logger.info(f"Test Data Evaluation: Model {args.model_name}")
+# Parse string like "1,2" into list of ints [1, 2]
+if args.gpus:
+    gpu_list = [int(x) for x in args.gpus.split(",")]
+else:
+    gpu_list = None
+device = setup_device(gpus=gpu_list)
+
+logger.info(f"Test Data Evaluation: Model {args.model_name}_{args.seed}")
 
 # Load tokenizer and model
-tokenizer = AutoTokenizer.from_pretrained(f'{path}{args.model_name}.model')
+tokenizer = AutoTokenizer.from_pretrained(f'{path}models_and_checkpoints/{args.model_name}_{args.seed}.model')
 model = AutoModelForTokenClassification.from_pretrained(
-    f'{path}{args.model_name}.model',
+    f'{path}models_and_checkpoints/{args.model_name}_{args.seed}.model',
     id2label=settings.id2label,
     label2id=settings.label2id,
 )
 model = model.to(device)
-train_dataset, dev_dataset, test_dataset = reddit_impacts_dataset()
+train_dataset, dev_dataset, test_dataset = reddit_impacts_dataset(args.seed)
 
 # test_dataset = test_dataset[9:11]
 # Predict labels for each token in paragraph
@@ -61,6 +70,7 @@ for i, post_tokens in enumerate(test_dataset['tokens']):
     # Map predictions back to word-level
     word_ids = inputs.word_ids(batch_index=0)  # Get alignment between word and token
     # print("word_ids = ",word_ids)
+    # print("predictions = ",predictions)
 
     post_prediction_label = []
     previous_word_idx = None
@@ -84,7 +94,8 @@ for i, post_tokens in enumerate(test_dataset['tokens']):
 results_per_entity = calculate_f1_per_entity_covering_all(test_dataset['ner_tags_str'], prediction_label)
 
 # Print results
-logger.info(f"Relaxed F1 Score Results Per Entity for model {args.model_name}")
+logger.info(f"Relaxed F1 Score Results Per Entity for model {args.model_name} seed {args.seed}")
+
 for entity, metrics in results_per_entity.items():
     result_str = f"Entity Type: {entity}\n"
     for metric, value in metrics.items():
@@ -96,4 +107,4 @@ logger.info("Save the prediction result as dataframe")
 test_df = pd.DataFrame(test_dataset)
 test_df['prediction'] = prediction_label
 test_df = test_df[["tokens","labels","ner_tags_str","prediction"]]
-test_df.to_excel(f"/labs/sarkerlab/sdey26/Reddit_Impacts_NER/test_pred_files/{args.model_name}_pred.xlsx", index=False)
+test_df.to_excel(f"{path}test_pred_files/{args.model_name}_{args.seed}_pred.xlsx", index=False)
