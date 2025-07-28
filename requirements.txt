@@ -68,6 +68,7 @@ pydantic_core==2.33.2
 pyerf==1.0.1
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
 pytorch-crf==0.7.2
 pytz==2025.2
 PyYAML==6.0.2

@@ -7,8 +7,9 @@ import pandas as pd
 from typing import List, Tuple, Dict
 from datetime import datetime
 import time
-import openai
+
 import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer, util
 from dotenv import load_dotenv
 
@@ -16,15 +17,15 @@ load_dotenv()
 
 pd.set_option('display.max_colwidth', None)
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
-output_json_file = "./test_pred_files/llms/"
 
-# configure API version
-openai.api_type = os.getenv("openai_api_type")
-openai.api_base = os.getenv("openai_api_base")
-openai.api_version = os.getenv("openai_api_version")
-openai.api_key = os.getenv("openai_api_key")
-deployment_name = os.getenv("deployment_name")
+# Define the local API URL
+local_api_url = os.getenv("local_llama_url")
+output_json_file = "./test_pred_files/llms/"
+model_name = 'meta-llama/Meta-Llama-3-70B-Instruct'
+max_tokens = 500  # the number of newly generated tokens
+
+# Initialize the model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 
 def save_results(results, json_file):
     """
@@ -40,8 +41,8 @@ def save_results(results, json_file):
     with open(json_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-def read_json_file(gpt4_json_file):
-    with open(gpt4_json_file, 'r') as f:
+def read_json_file(llama_json_file):
+    with open(llama_json_file, 'r') as f:
         data = json.load(f)
     return data
 
@@ -71,7 +72,7 @@ def few_shot_examples():
     return examples
 
 # few_shot_examples = few_shot_examples()
-def get_top_n_matches(shot, input_tokens): 
+def get_top_n_matches(shot,input_tokens): 
     data = pd.read_csv('new_data/new_train_data.csv')
     data = data[['tokens', 'ner_tags']]
 
@@ -79,9 +80,8 @@ def get_top_n_matches(shot, input_tokens):
     both_impacts = data[data['ner_tags'].astype(str).str.contains('SocialImpacts') & data['ner_tags'].astype(str).str.contains('ClinicalImpacts')]
     both_impacts['text'] = both_impacts['tokens'].apply(lambda x: ' '.join(x))
 
-    # print(both_impacts[10:14])
-
     # Load model once
+    model = SentenceTransformer('all-MiniLM-L6-v2')
     embeddings = model.encode(both_impacts['text'].tolist(), convert_to_tensor=True)
     
     input_text = ' '.join(input_tokens)
@@ -93,11 +93,11 @@ def get_top_n_matches(shot, input_tokens):
     
     top_indices = top_k.indices.cpu().numpy()
     top_scores = [score.item() for score in top_k.values]
-
-    top_n_df = both_impacts.iloc[top_indices].copy() # fine because .iloc is position-based
+    
+    top_n_df = both_impacts.iloc[top_indices].copy()
     top_n_df['similarity_score'] = top_scores
 
-    #print(top_n_df) # print top3 from train_df that are matched based on test tokens
+    print(top_n_df) # print top3 from train_df that are matched based on test tokens
     
     # Create a new column with token-label format
     top_n_df['token_label'] = top_n_df.apply(
@@ -111,7 +111,7 @@ def get_top_n_matches(shot, input_tokens):
     examples = [(row['tokens'], row['token_label']) for index, row in top_n_df.iterrows()]
     return examples
 
-def build_prompt(shot: int, tokens: List[str]) -> str:
+def build_llama_prompt(shot: int, tokens: List[str]) -> str:
     annotation_guidelines = (
         "=== Strict Annotation Rules ===\n"
         "1. Annotate ONLY first-person experiences. Ignore third-party reports.\n"
@@ -122,7 +122,7 @@ def build_prompt(shot: int, tokens: List[str]) -> str:
         "6. Label mental health terms (e.g., 'depression') as ClinicalImpacts unless context clearly shows a non-opioid cause.\n"
         "7. Label non-integral words (e.g., adjectives, adverbs, or temporal words like 'very', 'suddenly') as 'O' if they are not essential to the entity span.\n"
         "8. For corrupted or unreadable tokens (e.g., 'Ìm', '?', '##', etc.), ALWAYS label as 'O'.\n"
-        "9. Maintain the exact token order and label each token with either\n"
+        "9. Maintain the exact token order and label each token with either:\n"
         "10. Continue labeling all tokens until the end. Do not output '?' or stop early. If unsure about any token, label it as 'O'.\n"
 
         "=== Output Format ===\n"
@@ -137,11 +137,12 @@ def build_prompt(shot: int, tokens: List[str]) -> str:
         f"{annotation_guidelines}\n"
         # "=== Examples ===\n"
     )
-    
-    # examples = few_shot_examples()
-    if shot != 0:
-        examples = get_top_n_matches(shot, tokens)
 
+    # examples = few_shot_examples()
+    if shot !=0: 
+        examples = get_top_n_matches(shot,tokens)
+        print("build propt ----------> ", shot)
+        
         for i, (toks, labels) in enumerate(examples, 1):
             combined = " ".join(labels)
             prompt += (
@@ -154,61 +155,45 @@ def build_prompt(shot: int, tokens: List[str]) -> str:
         f"Tokens: {tokens}\n"
         "Output:"
     )
+    
     return prompt
 
-def classify_with_gpt4o(shot: int, tokens: List[str]):
-    response_text = None
-    prompt = build_prompt(shot, tokens)
-    # print("prompt = ", prompt)
 
-    try:
-        response = openai.ChatCompletion.create(
-            # model="gpt-4o",
-            engine=deployment_name,  # Azure deployment name
-            messages=[
-                {"role": "system", "content": "You are an expert medical NER annotator."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.2,
-            max_tokens=300
-        )
-        output_text = response["choices"][0]["message"]["content"].strip()
-        # print("output text = ", output_text)
+def classify_tokens(shot: int,tokens: List[str]) -> List[str]:
+    """
+    Classifies tokens using LLM API
+    Returns: List of 'token-Label' pairs
+    """
+    try: 
+        # print(build_llama_prompt(shot, tokens))
+        payload = {
+            "model": "meta-llama/Meta-Llama-3-70B-Instruct",
+            "prompt": build_llama_prompt(shot, tokens),
+            "max_tokens": 300,
+            "temperature": 0.2,
+            "stop": ["\n\n"]
+        }
+
+        response = requests.post(local_api_url, json=payload)
+
+        if response.status_code == 200:
+            new_response = response.json()
+            # print(new_response)
+            raw_text = new_response['choices'][0]['text']  # Extract the text field
+            return raw_text
+
     except Exception as e:
-        print(f"Error processing API response: {e}")
-        output_text = None
-
-    return output_text
-
-# def top_3_similarity_check():
-    # test_df = pd.read_csv('new_data/new_test_data.csv')
-    # test_df = test_df[['tokens', 'ner_tags']]
-    # test_df[['tokens', 'ner_tags']] = test_df[['tokens', 'ner_tags']].applymap(ast.literal_eval) # convert string to list 
-
-    # for index, row in test_df.iterrows():
-    #     tokens = row['tokens']
-    #     truth_label = row['ner_tags']
-    #     # print(index, tokens, truth_label)
-    #     data = get_top3_matches(tokens)
-    #     print("tokens = ", tokens)
-    #     for i, (toks, labels) in enumerate(data, 1):
-    #         combined = " ".join(labels)
-    #         prompt = (
-    #             f"Example {i}:\n"
-    #             f"{combined}\n\n"
-    #         )
-    #         print(prompt)
-    #         print("-"*100)
-    #     break
+        print(e)
+        return None
 
 def main(shot):
     test_df = pd.read_csv('new_data/new_test_data.csv')
     test_df = test_df[['tokens', 'ner_tags']]
     test_df[['tokens', 'ner_tags']] = test_df[['tokens', 'ner_tags']].applymap(ast.literal_eval) # convert string to list 
 
-    gpt4_json_file = f"{output_json_file}gpt4_{shot}_shot.json" 
+    llama_json_file = f"{output_json_file}llama_{shot}_shot.json"
 
-    stored_data = read_json_file(gpt4_json_file)
+    stored_data = read_json_file(llama_json_file)
     stored_indices = [d['index'] for d in stored_data]
     print(stored_indices)
     for index, row in test_df.iterrows():
@@ -218,8 +203,8 @@ def main(shot):
         tokens = row['tokens']
         truth_label = row['ner_tags']
         # print(index, tokens, truth_label)
-
-        prediction = classify_with_gpt4o(shot,tokens)
+        
+        prediction = classify_tokens(shot,tokens)
         if prediction == None: 
             prediction = []
 
@@ -230,8 +215,36 @@ def main(shot):
             "pred_label": prediction
         }
         print(pred_results)
-        save_results(pred_results, gpt4_json_file)
+        save_results(pred_results, llama_json_file)
         time.sleep(5)
 
-#top_3_similarity_check()
-main(shot=0) # shot = 0, 3, 5
+main(shot=3)
+
+
+
+
+
+
+# examples = few_shot_examples()
+
+# for e in examples: 
+#     print(e)
+
+# test_df = pd.read_csv('new_data/new_test_data.csv')
+# test_df = test_df[['tokens', 'ner_tags']]
+# print(test_df)
+# test_df[['tokens', 'ner_tags']] = test_df[['tokens', 'ner_tags']].applymap(ast.literal_eval) # convert string to list 
+
+# for index, row in test_df.iterrows():
+#     print(row)
+#     break
+
+# custom_tokens = ['A', 'lot', 'of', 'government', 'organisations', 'do', 'it', 'that', 'way', '.']
+# top3 = get_top_n_matches(custom_tokens)
+# print(top3)
+# print(("---"*20))
+
+# examples = few_shot_examples()
+# print(examples)
+
+# print(build_llama_prompt(custom_tokens))
