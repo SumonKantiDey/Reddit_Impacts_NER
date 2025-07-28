@@ -48,11 +48,13 @@ These scripts will:
 > ⚠️ Make sure you have appropriate API access or local setup for each LLM.
 
 ### Methods ###
-![Model Architecture](./figs/method.png)
+<p align="center"><img src="./figs/method.png" alt="Model Architecture" width="250"/></p>
  
 ### Dataset ###
 The dataset will be made available upon reasonable request.
 
 ### Results ###
-![results](./figs/results.png)
-![entity-level](./figs/entity-level.png)
+<p align="center"><img src="./figs/results.png" alt="results" width="250"/></p>
+
+<p align="center"><img src="./figs/entity-level.png" alt="entity-level" width="250"/></p>
+
