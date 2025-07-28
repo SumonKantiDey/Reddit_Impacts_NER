@@ -48,11 +48,11 @@ These scripts will:
 > ⚠️ Make sure you have appropriate API access or local setup for each LLM.
 
 ### Methods ###
-![Model Architecture](/Reddit_Impacts_NER/figs/method.png)
+![Model Architecture](./figs/method.png)
  
 ### Dataset ###
 The dataset will be made available upon reasonable request.
 
 ### Results ###
-![results](/Reddit_Impacts_NER/figs/results.png)
-![entity-level](/Reddit_Impacts_NER/figs/entity-level.png)
+![results](./figs/results.png)
+![entity-level](./figs/entity-level.png)
