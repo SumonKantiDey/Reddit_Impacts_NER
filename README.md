@@ -9,7 +9,7 @@ This repository contains the code and supplementary materials for the paper. It 
 - `./src` - Contains source code for Named Entity Recognition (NER) using LLMs and PLMs.
 
 ### Code usage instructions ### 
-First clone this repo and move to the directory. Then, install necessary libraries. Also, following commands can be used:
+First, clone this repo and move to the directory. Then, install the necessary libraries. Also, the following commands can be used:
 ```bash
 $ git clone https://github.com/SumonKantiDey/Reddit_Impacts_NER.git
 $ cd Reddit_Impacts_NER/ 
