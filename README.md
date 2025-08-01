@@ -51,7 +51,7 @@ These scripts will:
 <p align="center"><img src="./figs/method.png" alt="Model Architecture" width="400"/></p>
  
 ### Dataset ###
-The dataset will be made available upon reasonable request.
+The dataset will be made available upon reasonable request, subject to any necessary data-use agreements.
 
 ### Results ###
 <p align="center"><img src="./figs/results.png" alt="results" width="400"/></p>
