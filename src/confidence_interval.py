@@ -83,7 +83,6 @@ if __name__ == "__main__":
     if args.use_crf == True:
         save_model_name = settings.models_config[args.model_name]
         file_path = f"{path}test_pred_files/{save_model_name}_{args.seed}_bilstm_crf_pred.xlsx"  # _crf_pred
-        print("come here >>>>>>>>>",file_path)
     else: 
         file_path = f"{path}test_pred_files/{args.model_name}_{args.seed}_pred.xlsx"
 

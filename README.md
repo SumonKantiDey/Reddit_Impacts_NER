@@ -16,6 +16,10 @@ $ cd Reddit_Impacts_NER/
 $ sudo pip install -r requirements.txt
 ```
 
+### Copy the example environment file ###
+```
+$ cp .env.example .env
+```
 ### Model Training and Inference ### 
 Train and evaluate **PLM-based** models across multiple random seeds using the following scripts:
 ```bash
@@ -33,19 +37,24 @@ src/train_plm_crf.sh
 > ✨ **Tip:** You can modify parameters (e.g., model name, GPU ID) directly within the script files.
 
 ### Few-shot Inference with LLMs ### 
-We support few-shot prompting using several large language models. Run the desired script from below:
+Few-shot prompting using several large language models. Run the desired script from below:
 ```bash
-# Few-shot inference using GPT-4
-python src/few_shot_gpt4.py
-# Few-shot inference using LLaMA
-python src/few_shot_llama.py
-# Few-shot inference using Gemma
-python src/few_shot_gemma.py
+# Few-shot inference using
+python -m src.few_shot_gpt4
+python -m src.few_shot_llama
+python -m src.few_shot_gemma
+
+# Post-process results based on LLM outputs
+python -m src.few_shot_post_processing
+
+# Compute confidence intervals 
+python -m src.confidence_interval
 ```
 These scripts will:
 - Perform NER via in-context learning with few-shot examples
-- Generate predictions using LLMs
-> ⚠️ Make sure you have appropriate API access or local setup for each LLM.
+- Generate and post-process predictions from selected LLM
+
+> ⚠️ Make sure you have appropriate API keys stored in the ```.env``` file or have a local setup for each LLM.
 
 ### Methods ###
 <p align="center"><img src="./figs/method.png" alt="Model Architecture" width="400"/></p>
