@@ -13,7 +13,7 @@ First, clone this repo and move to the directory. Then, install the necessary li
 ```bash
 $ git clone https://github.com/SumonKantiDey/Reddit_Impacts_NER.git
 $ cd Reddit_Impacts_NER/ 
-$ sudo pip install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 ### Copy the example environment file ###
@@ -39,7 +39,7 @@ src/train_plm_crf.sh
 ### Few-shot Inference with LLMs ### 
 Few-shot prompting using several large language models. Run the desired script from below:
 ```bash
-# Few-shot inference using
+# Few-shot inference script
 python -m src.few_shot_gpt4
 python -m src.few_shot_llama
 python -m src.few_shot_gemma
