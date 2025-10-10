@@ -1,6 +1,6 @@
-### Inference Gap in Domain Expertise and Machine Intelligence in Named Entity Recognition: Creation of and Insights from a Substance Use-related Dataset
+### [Inference Gap in Domain Expertise and Machine Intelligence in Named Entity Recognition: Creation of and Insights from a Substance Use-related Dataset](https://arxiv.org/pdf/2508.19467)
 
-This repository contains the code and supplementary materials for the paper. It will be updated with more reproducible resources, such as models, training scripts, and more.
+This repository contains the code and supplementary materials for the paper. It will be updated with more reproducible resources, such as models, training scripts, and more. The paper has been accepted for oral presentation and publication in the Proceedings of the [Pacific Symposium on Biocomputing (PSB) 2026](https://psb.stanford.edu/). 
 
 ### Folder structure ###
 - `./new_data` - Contains all dataset-related files.
@@ -67,3 +67,14 @@ The dataset will be made available upon reasonable request, subject to any neces
 
 <p align="center"><img src="./figs/entity-level.png" alt="entity-level" width="400"/></p>
 
+
+## 🔗 Paper & Citation
+If you use the code of this repository in your research, please cite our paper:
+
+```bibtex
+@article{dey2025inference,
+  title={Inference Gap in Domain Expertise and Machine Intelligence in Named Entity Recognition: Creation of and Insights from a Substance Use-related Dataset},
+  author={Dey, Sumon Kanti and Powell, Jeanne M and Ismail, Azra and Perrone, Jeanmarie and Sarker, Abeed},
+  journal={arXiv preprint arXiv:2508.19467},
+  year={2025}
+}
