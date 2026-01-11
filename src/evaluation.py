@@ -210,9 +210,9 @@ def compute_metrics_ner(p):
     flat_preds = [item for sublist in true_predictions for item in sublist]
     flat_labels = [item for sublist in true_labels for item in sublist]
 
-    # 🛑 Add sanity check
+    # Add sanity check
     if len(flat_preds) != len(flat_labels):
-        print("⚠️ Length mismatch:")
+        print("Length mismatch:")
         print("flat_preds:", len(flat_preds))
         print("flat_labels:", len(flat_labels))
         print("Sample prediction:", true_predictions[0] if true_predictions else "None")
